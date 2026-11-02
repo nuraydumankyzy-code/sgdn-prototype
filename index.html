@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SGDN – Secure Global Diplomatic Network</title>
+<meta name="description" content="Working prototype of the Secure Global Diplomatic Network (SGDN) for the Ministry of Foreign Affairs of the Republic of Kazakhstan. All scenario data is simulated.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0f19'/%3E%3Cpath d='M16 5l9 4v6c0 6-4 10-9 12-5-2-9-6-9-12V9z' fill='none' stroke='%233ddbb4' stroke-width='2.5'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0b0f19; --bar:#0e1320; --panel:#151b2b; --panel2:#111727; --field:#0b101c;
+  --border:#283149; --text:#e6e9f0; --muted:#9aa3b5; --faint:#6c768b;
+  --accent:#8fa8ff; --accent-ink:#0d1430; --ok:#3ddbb4; --ok-bg:#12342c;
+  --bad:#f2545b; --bad-bg:#3a1418; --warn:#f0a33a; --warn-bg:#3a2a12; --focus:#3ddbb4;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* top bar */
+.head{position:sticky;top:0;z-index:20}
+.topbar{background:var(--bar);display:flex;align-items:center;gap:12px;padding:8px 10px;border-bottom:1px solid #1a2134;flex-wrap:wrap}
+.brand{font-weight:600;letter-spacing:.02em}
+.brand-sub{font-size:13px;color:var(--text);opacity:.85}
+.status{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:13px}
+.status.on{border-color:#2f7d69}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);display:inline-block;flex:none}
+.dot.ok{background:var(--ok)}.dot.bad{background:var(--bad)}.dot.warn{background:var(--warn)}
+.path{font-size:14px}
+.spacer{flex:1}
+.ghost{background:transparent;border:1px solid var(--border);border-radius:4px;padding:5px 10px;cursor:pointer;font-size:14px}
+.ghost:hover{border-color:var(--muted)}
+.tabs{background:#121828;display:flex;gap:6px;padding:0 4px;border-bottom:1px solid #1a2134;overflow-x:auto}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:12px 10px 9px;color:var(--muted);cursor:pointer;font-weight:500;white-space:nowrap}
+.tab[aria-selected=true]{color:var(--text);border-bottom-color:var(--ok)}
+.tab .count{display:inline-block;margin-left:6px;background:var(--bad);color:#fff;border-radius:9px;font-size:11px;padding:0 6px;line-height:17px}
+
+main{max-width:880px;margin:0 auto;padding:16px 16px 60px}
+h1{font-size:22px;font-weight:500;margin:6px 0 14px}
+h2{font-size:18px;font-weight:600;margin:0 0 8px}
+h3{font-size:14px;font-weight:600;margin:0 0 10px}
+p{margin:0 0 10px}
+.muted{color:var(--muted)}.faint{color:var(--faint)}.small{font-size:13px}
+.card{background:var(--panel);border:1px solid #1d2438;border-radius:6px;padding:14px;margin-bottom:12px}
+.card.top-ok{border-top:3px solid var(--ok)}.card.top-bad{border-top:3px solid var(--bad)}.card.top-warn{border-top:3px solid var(--warn)}
+.card.alert{background:var(--bad-bg);border-color:#5a2128;border-top:3px solid var(--bad)}
+.card.alert.done{background:var(--panel);border-top-color:var(--ok)}
+.card.alert.dismissed{background:var(--panel);border-top-color:var(--faint)}
+.chip{display:inline-block;font-size:11.5px;border:1px solid var(--border);border-radius:3px;padding:1px 7px;color:var(--muted);margin-right:6px;vertical-align:middle;background:#0f1424}
+.chip.bad{color:var(--bad);border-color:#5a2128;background:#2a1014}
+.chip.ok{color:var(--ok);border-color:#235e50;background:#0f2a24}
+.chip.warn{color:var(--warn);border-color:#5e4520;background:#2a1f0e}
+.chip.class{letter-spacing:.06em;text-transform:uppercase}
+.btn{display:inline-block;background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:4px;padding:8px 14px;font-weight:600;cursor:pointer;font-size:14px}
+.btn:hover{filter:brightness(1.07)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.btn.line{background:transparent;color:var(--accent);border-color:#4a5a8f}
+.btn.line:hover{border-color:var(--accent)}
+.btn.danger{background:transparent;color:var(--bad);border-color:#7a2c33}
+.btn.big{display:block;width:100%;padding:13px;background:#0f1528;color:var(--text);border:2px solid #4a5a8f;font-weight:500;font-size:15px}
+.btn.big:hover{border-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:760px){.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:inherit}
+
+/* lists */
+.netrow{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #1d2438}
+.netrow:last-of-type{border-bottom:0}
+.netrow .dot{margin-top:7px}
+.netrow .grow{flex:1;min-width:0}
+.badge{font-size:11.5px;padding:1px 6px;border-radius:3px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.badge.ok{color:var(--ok);background:var(--ok-bg);border-color:#235e50}
+.badge.bad{color:var(--bad);background:var(--bad-bg);border-color:#5a2128}
+.badge.warn{color:var(--warn);background:var(--warn-bg);border-color:#5e4520}
+.note-ok{background:var(--ok-bg);color:#8be8cf;border-radius:4px;padding:10px;font-size:13.5px;margin-top:10px}
+.note-bad{background:var(--bad-bg);color:#ff9aa0;border-radius:4px;padding:10px;font-size:13.5px;margin-top:10px}
+.note-warn{background:var(--warn-bg);color:#f6c27a;border-radius:4px;padding:10px;font-size:13.5px;margin-top:10px}
+.note{background:#10172a;border:1px solid #1d2438;border-radius:4px;padding:10px;font-size:13.5px;color:var(--muted);margin-bottom:12px}
+.pm{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1d2438}
+.pm:last-child{border-bottom:0}
+.pm .grow{flex:1;min-width:0}
+.mission{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1d2438;font-size:14px}
+.mission:last-child{border-bottom:0}
+.mission .dot{margin-top:7px}
+.map{background:#0f1424;border-radius:4px;margin-bottom:6px}
+
+/* messages */
+details.msg{background:var(--panel);border:1px solid #1d2438;border-radius:6px;margin-bottom:8px}
+details.msg>summary{list-style:none;cursor:pointer;padding:12px 14px}
+details.msg>summary::-webkit-details-marker{display:none}
+details.msg>summary .tri{display:inline-block;width:14px}
+details.msg[open]>summary .tri{transform:rotate(90deg)}
+details.msg .body{padding:0 14px 14px}
+.new{color:var(--bad);font-size:11.5px;background:#2a1014;border-radius:3px;padding:0 6px;margin:0 4px}
+
+details.src{border-bottom:1px solid #1d2438}
+details.src:last-of-type{border-bottom:0}
+details.src>summary{cursor:pointer;padding:8px 0;font-weight:500;list-style:none}
+details.src>summary::-webkit-details-marker{display:none}
+details.src>summary .tri{display:inline-block;width:14px;transition:transform .15s}
+details.src[open]>summary .tri{transform:rotate(90deg)}
+details.src .inner{padding:0 0 10px 16px;font-size:14px;color:var(--muted)}
+ul.why{margin:0;padding-left:20px}ul.why li{margin-bottom:3px}
+
+/* forms */
+label.lbl{display:block;font-weight:600;font-size:14px;margin:12px 0 6px}
+input.f,select.f,textarea.f{width:100%;background:var(--field);border:1px solid #1f2740;border-radius:4px;padding:9px 10px}
+textarea.f{min-height:110px;resize:vertical}
+input.f:focus,select.f:focus,textarea.f:focus{border-color:var(--ok);outline:none;box-shadow:0 0 0 1px var(--ok)}
+.check{display:inline-flex;align-items:center;gap:8px;margin:4px 18px 4px 0;font-size:14px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:#2f7cf6}
+.err{color:#ff8e95;font-size:13.5px;margin-top:8px}
+.signin{max-width:380px;margin:24px auto}
+.steps p{margin:0 0 8px}
+.steps .done{color:var(--ok)}.steps .notice{color:var(--warn)}.steps .wait{color:var(--text)}
+.steps .wait::after{content:"";display:inline-block;width:10px;height:10px;margin-left:8px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-1px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.drop{border:1px dashed #3a4566;border-radius:6px;padding:14px;text-align:center;color:var(--muted);font-size:14px}
+.drop.over{border-color:var(--ok);color:var(--text)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+
+/* modal & toast */
+.backdrop{position:fixed;inset:0;background:rgba(3,6,14,.72);z-index:50;display:flex;justify-content:flex-end}
+.sheet{width:min(520px,100%);height:100%;overflow:auto;background:#10172a;border-left:1px solid var(--border);padding:18px}
+.dialog{margin:auto;width:min(400px,calc(100% - 32px));background:#10172a;border:1px solid var(--border);border-radius:8px;padding:18px}
+.backdrop.center{justify-content:center;align-items:center}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px;margin-bottom:12px}
+table.t th,table.t td{text-align:left;padding:6px 6px;border-bottom:1px solid #1d2438;vertical-align:top}
+table.t th{color:var(--muted);font-weight:500}
+.toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;width:min(460px,calc(100% - 32px))}
+.toast{background:#1b2337;border:1px solid var(--border);border-left:4px solid var(--ok);border-radius:4px;padding:10px 12px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.4);animation:in .2s ease-out}
+.toast.warn{border-left-color:var(--warn)}.toast.bad{border-left-color:var(--bad)}
+@keyframes in{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<div id="modal"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   SGDN working prototype. All scenario data is simulated.
+   Security operations shown (ML-KEM / ML-DSA, NCA identity check,
+   satellite paths) are simulated; document integrity checks use
+   real SHA-256 hashing in the browser (Web Crypto API).
+   ============================================================ */
+
+// ---------- helpers ----------
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pad = n => String(n).padStart(2, "0");
+// Kazakhstan uses a single time zone, UTC+5, since March 2024.
+function astana(ts = Date.now()) { const d = new Date(ts + 5 * 3600e3); return pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()); }
+const T0 = Date.now();
+const ago = min => T0 - min * 60e3;
+const short = h => h.slice(0, 4) + "…" + h.slice(-4);
+
+// SHA-256: Web Crypto first, small pure-JS fallback for insecure contexts.
+async function sha256(data) {
+  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data);
+  if (window.crypto && crypto.subtle) {
+    try { const buf = await crypto.subtle.digest("SHA-256", bytes); return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join(""); } catch (e) {}
+  }
+  return sha256js(bytes);
+}
+function sha256js(m) {
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const l = m.length, nb = ((l + 9 + 63) >> 6) << 6, p = new Uint8Array(nb); p.set(m); p[l] = 0x80;
+  const dv = new DataView(p.buffer); dv.setUint32(nb - 4, (l * 8) >>> 0); dv.setUint32(nb - 8, Math.floor(l / 0x20000000));
+  const w = new Uint32Array(64), r = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let i = 0; i < nb; i += 64) {
+    for (let t = 0; t < 16; t++) w[t] = dv.getUint32(i + t * 4);
+    for (let t = 16; t < 64; t++) { const s0 = r(w[t-15],7)^r(w[t-15],18)^(w[t-15]>>>3), s1 = r(w[t-2],17)^r(w[t-2],19)^(w[t-2]>>>10); w[t] = (w[t-16]+s0+w[t-7]+s1)>>>0; }
+    let [a,b,c,d,e,f,g,h] = H;
+    for (let t = 0; t < 64; t++) { const t1 = (h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[t]+w[t])>>>0, t2 = ((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))>>>0; h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0; }
+    H = H.map((v, k) => (v + [a,b,c,d,e,f,g,h][k]) >>> 0);
+  }
+  return H.map(v => v.toString(16).padStart(8, "0")).join("");
+}
+
+function toast(text, kind = "") {
+  const el = document.createElement("div"); el.className = "toast " + kind; el.textContent = text;
+  $("#toasts").appendChild(el); setTimeout(() => el.remove(), 5200);
+}
+
+// ---------- state ----------
+const MISSIONS = {
+  tokyo: { name: "Embassy of Kazakhstan in Tokyo", short: "Tokyo", risk: "bad", status: "In the storm path. Staff check-in received " + astana(ago(13)) + "." },
+  seoul: { name: "Embassy of Kazakhstan in Seoul", short: "Seoul", risk: "warn", status: "At risk if the storm turns north. Waiting for check-in." },
+  beijing: { name: "Embassy of Kazakhstan in Beijing", short: "Beijing", risk: "ok", status: "Normal operations." },
+  crisis: { name: "Crisis cell, Astana", short: "Crisis cell", risk: "ok", status: "", hq: true }
+};
+
+const S = {
+  screen: "signin", tab: "dashboard", view: null, signinMsg: "", failed: 0, lockedUntil: 0,
+  user: { id: "MFA-KZ-0142", name: "Duty officer, Situation Centre", pin: null },
+  links: [
+    { id: "LEO-1", orbit: "Low orbit", base: 38, lat: 38, up: true },
+    { id: "MEO-2", orbit: "Medium orbit", base: 140, lat: 140, up: true },
+    { id: "GEO-3", orbit: "Geostationary", base: 560, lat: 560, up: true },
+    { id: "SOV-4", orbit: "Sovereign constellation", base: 95, lat: 95, up: true }
+  ],
+  national: [
+    { name: "Ministry network, Astana", ok: true },
+    { name: "National Certification Authority", ok: true },
+    { name: "Consular registry of citizens abroad", ok: true },
+    { name: "Partner exchange gateway (common schema v2)", ok: true }
+  ],
+  messages: [
+    { id: "m1", from: "tokyo", subject: "Typhoon warning, requesting guidance", cls: "SECRET", time: ago(12), unread: true, body: "Airlines are cancelling flights from tomorrow morning. About 900 registered citizens are in the region, mostly students and workers. Please advise on consular support and evacuation options." },
+    { id: "m2", from: "crisis", subject: "Crisis cell meets at 16:00", cls: "OFFICIAL USE", time: ago(31), unread: true, body: "The crisis cell meets at 16:00 Astana time. Please prepare a consolidated status for all affected missions." },
+    { id: "m3", from: "seoul", subject: "Monitoring the storm track", cls: "OFFICIAL USE", time: ago(55), unread: false, body: "No action needed yet. We will report if the forecast track turns north." }
+  ],
+  openMsg: null,
+  docs: [],
+  alert: {
+    detected: ago(41), opened: new Set(), reviewed: new Set(), translation: "draft", decision: null, decisionAt: null, reason: "", deeper: "none", panel: null,
+    sources: [
+      { id: "s1", name: "Weather forecast models", type: "Data feed", rel: "High", detail: "Ensemble output from three national meteorological services. 31 of 40 model runs bring the storm centre within 150 km of Tokyo in the next 30 hours. Retrieved 20 minutes ago; integrity hash checked." },
+      { id: "s2", name: "Satellite imagery", type: "Imagery", rel: "High", detail: "Geostationary weather-satellite imagery, last 6 hours. Cloud tops are cooling and the eye is becoming defined, which usually means the storm is strengthening." },
+      { id: "s3", name: "Local news, machine-translated", type: "Media", rel: "Medium", detail: "Six articles from three national Japanese outlets reporting flight cancellations and rail suspensions. Machine-translated from Japanese; wording may be imprecise." },
+      { id: "s4", name: "Social media clusters", type: "Social", rel: "Low", detail: "About 1,200 public posts mentioning airport closures. 22% come from unverified or newly created accounts. This source is weighted lowest and cannot raise confidence on its own." }
+    ]
+  },
+  compose: null, sending: null, queue: [], audit: [], failoverDemo: true, lastActive: Date.now()
+};
+
+function audit(action) { S.audit.unshift({ t: Date.now(), action }); }
+const active = () => S.links.find(l => l.up);
+const unread = () => S.messages.filter(m => m.unread && !m.mine).length;
+
+// ---------- documents (real hashing) ----------
+const DOC_SEED = [
+  { title: "Consular guidance for typhoon warnings, draft v3.pdf", cls: "OFFICIAL USE", sealed: "27 Sep, 13:12",
+    text: "CONSULAR GUIDANCE FOR TYPHOON WARNINGS (draft v3)\n1. Contact registered citizens through the consular registry.\n2. Publish shelter and hotline information in Kazakh, Russian and English.\n3. Coordinate with airlines on rebooking and with the host government on evacuation corridors." },
+  { title: "Bilateral consular agreement, signed copy.pdf", cls: "OFFICIAL USE", sealed: "14 Sep, 15:03",
+    text: "BILATERAL CONSULAR AGREEMENT (signed copy)\nArticle 4. Each Party shall notify the other without delay of emergencies affecting its nationals.\nArticle 7. Consular officers may assist nationals with travel documents during emergencies." },
+  { title: "Situation report 27 Sep, forwarded copy.pdf", cls: "SECRET", sealed: "27 Sep, 21:40",
+    text: "SITUATION REPORT 27 SEP\nAssessment: no immediate threat to mission staff. Recommended posture: monitor.",
+    tampered: "SITUATION REPORT 27 SEP\nAssessment: no immediate threat to mission staff. Recommended posture: stand down consular hotline." }
+];
+async function initDocs() {
+  for (const d of DOC_SEED) {
+    const sealedHash = await sha256(d.text);
+    S.docs.push({ id: "d" + (S.docs.length + 1), title: d.title, cls: d.cls, sealed: d.sealed, sealedHash, content: d.tampered || d.text, result: null, origin: "seed", flag: !!d.tampered });
+  }
+}
+async function verifyDoc(doc) {
+  const now = await sha256(doc.content);
+  doc.checkedHash = now;
+  doc.result = now === doc.sealedHash ? "ok" : "bad";
+  audit(`Verified integrity of "${doc.title}": ${doc.result === "ok" ? "match" : "MISMATCH"}`);
+  return doc.result;
+}
+
+// ---------- rendering ----------
+function topbar() {
+  const a = active(), on = S.screen === "app";
+  const pathTxt = !on ? "" : a ? `Path ${a.id}${a.id !== "LEO-1" ? " (backup)" : ""}` : "No path, messages held";
+  return `<header class="topbar">
+    <span class="brand">SGDN</span><span class="brand-sub">Secure Global Diplomatic Network</span>
+    ${on ? `<span class="status on" title="Session protection status"><span class="dot ok"></span>Protected: post-quantum encryption, identity verified</span>
+            <span class="path" aria-live="polite">${pathTxt}</span>`
+         : `<span class="status"><span class="dot"></span>Not signed in</span>`}
+    <span class="spacer"></span>
+    ${on ? `<button class="ghost" data-a="signout">Sign out</button>` : ""}
+    <button class="ghost" data-a="notes">Design notes</button>
+  </header>`;
+}
+function tabs() {
+  const t = [["dashboard", "Dashboard"], ["alerts", "Alerts"], ["messages", "Messages"], ["documents", "Documents"]];
+  return `<nav class="tabs" role="tablist" aria-label="Sections">${t.map(([k, v]) =>
+    `<button class="tab" role="tab" aria-selected="${S.tab === k}" data-a="tab" data-v="${k}">${v}${k === "messages" && unread() ? `<span class="count" aria-label="${unread()} unread">${unread()}</span>` : ""}${k === "alerts" && !S.alert.decision ? `<span class="count" aria-label="1 open alert">1</span>` : ""}</button>`).join("")}</nav>`;
+}
+
+function render() {
+  const app = $("#app");
+  if (S.screen === "signin") { app.innerHTML = `<div class="head">${topbar()}</div><main>${signinView()}</main>`; return; }
+  let body = "";
+  if (S.view === "alert") body = alertDetail();
+  else if (S.view === "compose") body = composeView();
+  else if (S.view === "sending") body = sendingView();
+  else body = ({ dashboard, alerts: alertsView, messages: messagesView, documents: documentsView })[S.tab]();
+  app.innerHTML = `<div class="head">${topbar()}${tabs()}</div><main id="main" tabindex="-1">${body}</main>`;
+}
+
+// ---- sign in ----
+function signinView() {
+  const locked = Date.now() < S.lockedUntil;
+  return `<div class="card signin">
+    <h1 style="margin-top:0">Sign in</h1>
+    <p class="muted">Ministry of Foreign Affairs of the Republic of Kazakhstan. Your identity is checked against the National Certification Authority before a secure session starts.</p>
+    <form id="signin" novalidate>
+      <label class="lbl" for="mid">Mission ID</label>
+      <input class="f" id="mid" autocomplete="username" value="${esc(S.user.id)}" required>
+      <label class="lbl" for="pin">PIN</label>
+      <input class="f" id="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Demo: any 4 or more digits" required>
+      <div style="margin-top:14px"><button class="btn" id="verify" ${locked ? "disabled" : ""}>Verify identity</button></div>
+      <div id="signinStatus" class="small muted" style="margin-top:10px" aria-live="polite">${S.signinMsg}</div>
+    </form>
+  </div>`;
+}
+async function doSignin(e) {
+  e.preventDefault();
+  if (Date.now() < S.lockedUntil) return;
+  const id = $("#mid").value.trim().toUpperCase(), pin = $("#pin").value.trim(), st = $("#signinStatus");
+  st.className = "err";
+  if (!/^MFA-KZ-\d{4}$/.test(id)) { st.textContent = "Mission ID must look like MFA-KZ-0142."; $("#mid").focus(); return; }
+  if (!/^\d{4,}$/.test(pin)) {
+    S.failed++;
+    if (S.failed >= 5) { S.lockedUntil = Date.now() + 30e3; S.signinMsg = `<span class="err">Too many attempts. Sign-in is locked for 30 seconds.</span>`; render(); setTimeout(() => { S.failed = 0; S.signinMsg = ""; if (S.screen === "signin") render(); }, 30e3); return; }
+    st.textContent = `The PIN must be at least 4 digits. Attempt ${S.failed} of 5.`; $("#pin").focus(); return;
+  }
+  $("#verify").disabled = true; st.className = "small muted";
+  st.innerHTML = `<span class="steps"><span class="wait">Insert or tap your digital signature token…</span></span>`; await sleep(1100);
+  st.innerHTML = `<span class="steps"><span class="wait">Token found. Checking your certificate with the National Certification Authority…</span></span>`; await sleep(1100);
+  st.innerHTML = `<span class="done" style="color:var(--ok)">Identity verified. Starting a post-quantum secure session.</span>`; await sleep(600);
+  S.user.id = id; S.user.pin = pin; S.failed = 0; S.signinMsg = ""; S.screen = "app"; S.tab = "dashboard"; S.view = null; S.lastActive = Date.now();
+  audit(`Signed in as ${id} (certificate verified)`);
+  render(); $("#main")?.focus();
+}
+
+// ---- dashboard ----
+function alertCard(compact) {
+  const A = S.alert;
+  if (A.decision === "escalated") return `<section class="card alert done"><span class="chip ok">Escalated</span><span class="chip">AI early warning, advisory only</span>
+      <h2 style="margin-top:8px">Typhoon near Tokyo: missions notified</h2><p class="muted">You escalated at ${astana(A.decisionAt)}. ${A.notified.length} mission(s) notified through SGDN.</p>
+      <button class="btn line" data-a="openAlert">View alert record</button></section>`;
+  if (A.decision === "dismissed") return `<section class="card alert dismissed"><span class="chip">Dismissed</span><span class="chip">AI early warning, advisory only</span>
+      <h2 style="margin-top:8px">Typhoon near Tokyo: dismissed by you</h2><p class="muted">Reason: ${esc(A.reason)}</p>
+      <button class="btn line" data-a="openAlert">View alert record</button></section>`;
+  return `<section class="card alert" aria-labelledby="alertTitle">
+    <span class="chip bad">Critical</span><span class="chip">AI early warning, advisory only</span>
+    ${A.deeper !== "none" ? `<span class="chip warn">Deeper analysis ${A.deeper === "done" ? "added" : "requested"}</span>` : ""}
+    <h2 id="alertTitle" style="margin-top:8px">A typhoon is approaching the Tokyo area and may close airports within 30 hours</h2>
+    <p class="muted">Confidence 78%. ${A.sources.length} sources. Two missions affected. About 900 registered Kazakhstani citizens in the region. You make the decision.</p>
+    <button class="btn" data-a="openAlert">Review alert and sources</button>
+  </section>`;
+}
+function mapSvg() {
+  const col = k => ({ bad: "#f2545b", warn: "#f0a33a", ok: "#3ddbb4" })[MISSIONS[k].risk];
+  return `<svg class="map" viewBox="0 0 260 110" role="img" aria-label="Map: Astana headquarters linked to Beijing, Seoul and Tokyo">
+    <path d="M40 30 L130 66 M40 30 L180 38 M40 30 L222 82" stroke="#5b6785" stroke-dasharray="3 3" fill="none"/>
+    <circle cx="236" cy="72" r="18" fill="#f2545b" fill-opacity=".12" stroke="#f2545b" stroke-opacity=".35" stroke-dasharray="2 3"/>
+    <rect x="33" y="23" width="13" height="13" fill="#8fa8ff"/><text x="50" y="33" fill="#c9d0e0" font-size="9">Astana (HQ)</text>
+    <circle cx="130" cy="66" r="6" fill="${col("beijing")}"/><text x="140" y="70" fill="#c9d0e0" font-size="9">Beijing</text>
+    <circle cx="180" cy="38" r="6" fill="${col("seoul")}"/><text x="190" y="42" fill="#c9d0e0" font-size="9">Seoul</text>
+    <circle cx="222" cy="82" r="6" fill="${col("tokyo")}"/><text x="203" y="102" fill="#c9d0e0" font-size="9">Tokyo</text>
+  </svg>`;
+}
+function networkPanel() {
+  const a = active(), anyDown = S.links.some(l => !l.up), ups = S.links.filter(l => l.up).length;
+  return `<section class="card ${a && a.id !== "LEO-1" ? "top-warn" : a ? "top-ok" : "top-bad"}" aria-labelledby="netH">
+    <h3 id="netH">Network status</h3>
+    ${S.links.map(l => `<div class="netrow"><span class="dot ${!l.up ? "bad" : l === a ? "ok" : ""}"></span>
+      <div class="grow"><b>${l.id}</b> <span class="muted">${l.orbit}, ${l.up ? l.lat + " ms" : "no signal"}</span></div>
+      <span class="badge ${!l.up ? "bad" : l === a ? "ok" : ""}">${!l.up ? "Down" : l === a ? "Active" : "Standby"}</span></div>`).join("")}
+    ${a ? `<div class="note-ok">Every path has the same protection: post-quantum encryption and your signed identity.</div>`
+        : `<div class="note-bad">All paths are down. New messages are held encrypted on this device and sent automatically when a path returns.${S.queue.length ? ` ${S.queue.length} message(s) waiting.` : ""}</div>`}
+    <div class="row" style="margin-top:10px">
+      ${ups > 0 ? `<button class="btn line" data-a="dropLink">Simulate link loss (demo)</button>` : ""}
+      ${anyDown ? `<button class="btn line" data-a="restore">Restore links (demo)</button>` : ""}
+    </div>
+  </section>`;
+}
+function dashboard() {
+  const pri = S.messages.filter(m => m.unread && !m.mine);
+  return `<p class="muted small">Situation Centre, Ministry of Foreign Affairs of the Republic of Kazakhstan, Astana. It is <span id="clock">${astana()}</span> Astana time. All scenario data is simulated.</p>
+  ${alertCard()}
+  <div class="grid2"><button class="btn big" data-a="compose">New secure message</button><button class="btn big" data-a="composeDoc">Send a secure document</button></div>
+  <div class="grid3">
+    <div>${networkPanel()}
+      <section class="card top-ok"><h3>Works with national systems</h3>
+      ${S.national.map(n => `<div class="netrow"><span class="dot ok"></span><div class="grow">${n.name}</div><span class="badge ok">Connected</span></div>`).join("")}
+      </section></div>
+    <section class="card" aria-labelledby="pmH"><h3 id="pmH">Priority messages</h3>
+      ${pri.length ? pri.map(m => `<div class="pm"><div class="grow"><b>${esc(MISSIONS[m.from].name)}</b> <span class="chip class">${m.cls}</span><div>${esc(m.subject)}</div></div>
+        <button class="btn line" data-a="openMsg" data-v="${m.id}">Open</button></div>`).join("") : `<p class="muted small">No unread priority messages.</p>`}
+    </section>
+    <section class="card top-warn" aria-labelledby="amH"><h3 id="amH">Affected missions</h3>${mapSvg()}
+      ${["tokyo", "seoul", "beijing"].map(k => `<div class="mission"><span class="dot ${MISSIONS[k].risk}"></span><div><b>${MISSIONS[k].name}</b><div class="muted">${esc(MISSIONS[k].status)}</div></div></div>`).join("")}
+    </section>
+  </div>`;
+}
+
+// ---- alerts ----
+function alertsView() {
+  return `<h1>Alerts</h1>${alertCard()}
+  <section class="card"><h3>Watchlist</h3><p class="muted small" style="margin:0">No action needed. Planned maintenance on MEO-2 (low). Consular registry sync in Astana (low).</p></section>`;
+}
+function alertDetail() {
+  const A = S.alert, n = A.reviewed.size, canEsc = n > 0 && !A.decision;
+  const trans = A.translation;
+  return `<button class="link" data-a="back">Back to dashboard</button>
+  <div class="note" style="margin-top:12px">The AI supports your analysis. It never sends, escalates or decides anything on its own.</div>
+  <h1 style="margin-bottom:6px">A typhoon is approaching the Tokyo area</h1>
+  <div style="margin-bottom:12px"><span class="chip bad">Critical</span><span class="chip">Confidence 78%, moderate</span><span class="chip">Detected ${astana(A.detected)} Astana time</span></div>
+  <section class="card"><h3>Why the AI flagged this</h3><ul class="why">
+    <li>Most forecast model runs bring the storm close to the Tokyo area within 30 hours.</li>
+    <li>Satellite imagery shows the storm strengthening over warm water.</li>
+    <li>Japanese media report flight cancellations and rail suspensions, and 22% of social posts come from unverified accounts.</li>
+    <li>The consular registry lists about 900 Kazakhstani citizens in the region. Similar storms closed airports for over 24 hours in 3 earlier cases. The sample is small, so treat it with caution.</li></ul></section>
+  <section class="card"><h3>Sources: check them yourself (<span id="revCount">${n} of ${A.sources.length}</span> reviewed)</h3>
+    ${A.sources.map(s => `<details class="src" data-src="${s.id}" ${A.opened.has(s.id) ? "open" : ""}><summary><span class="tri">▶</span>${esc(s.name)} <span class="chip">${s.type}</span><span class="chip ${s.rel === "High" ? "ok" : s.rel === "Low" ? "bad" : "warn"}">Reliability: ${s.rel}</span>${A.reviewed.has(s.id) ? `<span class="chip ok">Reviewed</span>` : ""}${s.added ? `<span class="chip warn">Added by analyst team</span>` : ""}</summary>
+      <div class="inner"><p>${esc(s.detail)}</p>${A.reviewed.has(s.id) ? `<span class="small" style="color:var(--ok)">You marked this source as reviewed.</span>` : `<button class="btn line" data-a="review" data-v="${s.id}">Mark as reviewed</button>`}</div></details>`).join("")}
+  </section>
+  <section class="card ${trans === "approved" ? "top-ok" : "top-warn"}"><h3>Translated excerpt</h3>
+    <p>“All flights from the Tokyo airports are cancelled from tomorrow morning.”</p>
+    ${trans === "approved" ? `<p class="small"><b>Kazakh:</b> «Ертең таңертеңнен бастап Токио әуежайларынан барлық рейстер тоқтатылады.»<br><b>Russian:</b> «Все рейсы из аэропортов Токио отменяются с завтрашнего утра.»</p>
+      <p class="muted small">Japanese to English, Kazakh and Russian. Signed off by the duty interpreter (Japanese desk) at ${astana(A.transAt)}.</p><span class="chip ok">Approved for official use</span>`
+      : `<p class="muted small">Japanese to English, machine draft. Kazakh and Russian versions follow after sign-off.</p>
+      <div class="row"><span class="chip warn">Draft, not for official use</span>
+      ${trans === "pending" ? `<span class="small muted steps"><span class="wait">Sent to the duty interpreter, waiting for sign-off</span></span>` : `<button class="btn line" data-a="signoff">Request interpreter sign-off</button>`}</div>`}
+  </section>
+  <section class="card"><h3>Your decision</h3>${decisionBlock(canEsc, n)}</section>`;
+}
+function decisionBlock(canEsc, n) {
+  const A = S.alert;
+  if (A.decision === "escalated") return `<div class="note-ok" style="margin:0">Escalated by you (${esc(S.user.id)}) at ${astana(A.decisionAt)}. Notified: ${A.notified.map(k => MISSIONS[k].short).join(", ")}. The decision is recorded in the audit log.</div>`;
+  if (A.decision === "dismissed") return `<div class="note" style="margin:0">Dismissed by you at ${astana(A.decisionAt)}. Reason: ${esc(A.reason)}</div><button class="btn line" data-a="reopen">Reopen alert</button>`;
+  if (A.panel === "escalate") return `<p class="small muted">Choose which missions get the escalation notice. It will be sent as a signed SECRET message.</p>
+    <div>${["tokyo", "seoul", "beijing"].map(k => `<label class="check"><input type="checkbox" name="escTo" value="${k}" ${k !== "beijing" ? "checked" : ""}>${MISSIONS[k].name}</label>`).join("")}</div>
+    <label class="lbl" for="escNote">Instruction to missions</label>
+    <textarea class="f" id="escNote">Activate the consular emergency plan. Contact registered citizens, publish hotline details in Kazakh, Russian and English, and report staff status every 6 hours.</textarea>
+    <div id="escErr" class="err" aria-live="polite"></div>
+    <div class="row" style="margin-top:12px"><button class="btn" data-a="confirmEsc">Confirm and send</button><button class="btn line" data-a="cancelPanel">Cancel</button></div>`;
+  if (A.panel === "dismiss") return `<label class="lbl" for="disReason" style="margin-top:0">Why are you dismissing this alert? (recorded in the audit log)</label>
+    <textarea class="f" id="disReason" style="min-height:70px" placeholder="For example: the forecast track has moved east, no mission is at risk."></textarea>
+    <div id="disErr" class="err" aria-live="polite"></div>
+    <div class="row" style="margin-top:12px"><button class="btn danger" data-a="confirmDismiss">Dismiss alert</button><button class="btn line" data-a="cancelPanel">Cancel</button></div>`;
+  return `<div class="row"><button class="btn" data-a="escalate" ${canEsc ? "" : "disabled"}>Escalate and notify missions</button>
+    <button class="btn line" data-a="dismiss">Dismiss</button>
+    <button class="btn line" data-a="deeper" ${A.deeper !== "none" ? "disabled" : ""}>${A.deeper === "none" ? "Request deeper analysis" : A.deeper === "pending" ? "Analysis requested…" : "Deeper analysis added"}</button></div>
+    <p class="muted small" style="margin-top:10px">${canEsc ? `${n} source(s) reviewed. Escalation is unlocked.` : "Review at least one source to unlock escalation."}</p>`;
+}
+
+// ---- messages ----
+function msgFromLabel(m) { return m.mine ? `You to ${m.to.map(k => MISSIONS[k].name).join(" and ")}` : MISSIONS[m.from].name; }
+function messagesView() {
+  return `<div class="row" style="justify-content:space-between"><h1>Messages</h1><button class="btn" data-a="compose">New secure message</button></div>
+  ${S.queue.length ? `<div class="note-warn" style="margin:0 0 10px">${S.queue.length} message(s) held encrypted on this device. They will send automatically when a path returns.</div>` : ""}
+  ${S.messages.map(m => `<details class="msg" data-msg="${m.id}" ${S.openMsg === m.id ? "open" : ""}><summary>
+     <span class="tri">▶</span><b>${esc(msgFromLabel(m))}</b>${m.unread && !m.mine ? `<span class="new">New</span>` : ""} <span class="chip class">${m.cls}</span>${m.held ? `<span class="chip warn">Held, no path</span>` : ""}
+     <div>${esc(m.subject || "(no subject)")}</div><div class="faint small">${astana(m.time)}${m.mine ? " Astana time" : ""}${m.via ? ` · via ${m.via} · receipt ${short(m.receipt)}` : ""}</div></summary>
+     <div class="body"><p style="white-space:pre-wrap">${esc(m.body)}</p>
+     ${m.attach ? `<p class="small muted">Attachment: ${esc(m.attach)} (sealed, integrity verified before sending)</p>` : ""}
+     ${!m.mine ? `<button class="btn line" data-a="reply" data-v="${m.id}">Reply securely</button>` : ""}</div></details>`).join("")}`;
+}
+function newCompose(over = {}) { return Object.assign({ to: ["tokyo", "seoul"], cls: "OFFICIAL USE", subject: "", body: "", attach: null, pick: false, err: "", fail: S.failoverDemo }, over); }
+function composeView() {
+  const C = S.compose, a = active();
+  const docOpts = S.docs.map(d => `<label class="check" style="display:flex"><input type="radio" name="att" value="${d.id}" ${C.attach === d.id ? "checked" : ""}>${esc(d.title)} <span class="chip class">${d.cls}</span></label>`).join("");
+  return `<button class="link" data-a="back">Back to dashboard</button>
+  <h1 style="margin-top:12px">${C.replyTo ? "Reply securely" : "New secure message"}</h1>
+  <form id="compose" class="card" novalidate>
+    <fieldset style="border:0;padding:0;margin:0"><legend class="lbl" style="margin-top:0">To</legend>
+      ${["tokyo", "seoul", "beijing", "crisis"].map(k => `<label class="check"><input type="checkbox" name="to" value="${k}" ${C.to.includes(k) ? "checked" : ""}>${MISSIONS[k].name}</label>`).join("")}
+    </fieldset>
+    <label class="lbl" for="cls">Classification</label>
+    <select class="f" id="cls">${["OFFICIAL USE", "CONFIDENTIAL", "SECRET"].map(c => `<option ${C.cls === c ? "selected" : ""}>${c}</option>`).join("")}</select>
+    <label class="lbl" for="subj">Subject</label><input class="f" id="subj" value="${esc(C.subject)}" maxlength="120">
+    <label class="lbl" for="body">Message</label><textarea class="f" id="body" maxlength="4000">${esc(C.body)}</textarea>
+    <div style="margin-top:10px" class="small">
+      ${C.attach ? `<span>Attached: <b>${esc(S.docs.find(d => d.id === C.attach).title)}</b> </span><button type="button" class="link" data-a="unattach">Remove</button>`
+                 : `<span class="muted">No attachment.</span> <button type="button" class="link" data-a="pick">Attach a sealed document</button>`}
+    </div>
+    ${C.pick ? `<div class="card" style="background:var(--panel2);margin-top:10px"><h3>Choose a sealed document</h3>${docOpts}
+      <p class="small muted" style="margin-top:8px">The document's integrity is checked again before it is attached.</p>
+      <div class="row"><button type="button" class="btn line" data-a="doAttach">Attach</button><button type="button" class="link" data-a="pickClose">Close</button></div></div>` : ""}
+    <div id="cErr" class="err" aria-live="polite">${esc(C.err)}</div>
+  </form>
+  <section class="card top-ok"><h3>How it will be sent</h3>
+    <p class="small">Path: <b>automatic</b>, now ${a ? a.id : "none available (message will be held encrypted)"}. If it fails, SGDN switches to the next path by itself at the same security level.</p>
+    <p class="small">End-to-end encrypted (post-quantum), signed by you, stored encrypted.${" "}<span id="secretNote">${C.cls === "SECRET" ? "SECRET messages ask for your PIN again before sending." : ""}</span></p>
+    <label class="check small"><input type="checkbox" id="failDemo" ${C.fail ? "checked" : ""}>Demo: cut the active path while sending, to show automatic failover</label>
+  </section>
+  <div class="row"><button class="btn" data-a="send">Send securely</button><button class="btn line" data-a="back">Cancel</button></div>`;
+}
+function readCompose() {
+  const C = S.compose; if (!C || !$("#compose")) return;
+  C.to = [...document.querySelectorAll('input[name=to]:checked')].map(i => i.value);
+  C.cls = $("#cls").value; C.subject = $("#subj").value; C.body = $("#body").value; C.fail = $("#failDemo").checked;
+}
+function sendingView() {
+  const X = S.sending;
+  return `<section class="card ${X.done ? "top-ok" : "top-warn"}"><h2>${X.done ? X.doneTitle : "Sending securely"}</h2>
+    <div class="steps" aria-live="polite">${X.steps.map(s => `<p class="${s.k}">${esc(s.t)}</p>`).join("")}</div>
+    ${X.done ? `<p class="muted small" style="margin-top:12px">${X.receipt}</p>
+      <div class="row" style="margin-top:8px"><button class="btn" data-a="back">Back to dashboard</button><button class="btn line" data-a="tab" data-v="messages">View in Messages</button></div>` : ""}
+  </section>`;
+}
+
+// ---- documents ----
+function documentsView() {
+  return `<h1>Documents</h1><p class="muted small">Each document is sealed with a hash and a timestamp, so any change after signing is visible.</p>
+  ${S.docs.map(d => `<section class="card ${d.result === "bad" || d.flag ? "top-bad" : "top-ok"}">
+    <b>${esc(d.title)}</b><div class="muted small">${d.cls}. Sealed ${d.sealed}. Hash ${short(d.sealedHash)}</div>
+    <div class="row" style="margin-top:10px"><button class="btn line" data-a="verify" data-v="${d.id}">Verify integrity</button>${d.result !== "bad" ? `<button class="btn line" data-a="sendDoc" data-v="${d.id}">Send securely</button>` : ""}</div>
+    ${d.result === "ok" ? `<div class="note-ok">Verified. The content matches the hash sealed ${d.sealed} and the signer's identity is confirmed.<div class="mono faint" style="margin-top:4px">SHA-256 ${d.checkedHash}</div></div>` : ""}
+    ${d.result === "bad" ? `<div class="note-bad">Warning: the content changed after sealing. Do not use or forward it. Report it to your security officer.<div class="mono" style="margin-top:4px;opacity:.85">sealed ${d.sealedHash}<br>now&nbsp;&nbsp;&nbsp;${d.checkedHash}</div></div>` : ""}
+  </section>`).join("")}
+  <section class="card"><h3>Seal a new document</h3>
+    <p class="small muted">PDF, DOCX, PNG or JPEG, up to 10 MB. The file type is checked from its first bytes, then SGDN computes its SHA-256 hash in your browser. Demo: the file stays on this device.</p>
+    <label class="lbl" for="upCls" style="margin-top:0">Classification</label>
+    <select class="f" id="upCls"><option>OFFICIAL USE</option><option>CONFIDENTIAL</option><option>SECRET</option></select>
+    <div class="drop" id="drop" style="margin-top:10px"><label for="file" style="cursor:pointer"><u>Choose a file</u> or drop it here</label><input type="file" id="file" class="sr" accept=".pdf,.docx,.png,.jpg,.jpeg"></div>
+    <div id="upMsg" aria-live="polite"></div>
+  </section>`;
+}
+function sniff(b) {
+  const h = [...b.slice(0, 4)];
+  if (h[0] === 0x25 && h[1] === 0x50 && h[2] === 0x44 && h[3] === 0x46) return "PDF";
+  if (h[0] === 0x89 && h[1] === 0x50 && h[2] === 0x4e && h[3] === 0x47) return "PNG";
+  if (h[0] === 0xff && h[1] === 0xd8 && h[2] === 0xff) return "JPEG";
+  if (h[0] === 0x50 && h[1] === 0x4b && h[2] === 0x03 && h[3] === 0x04) return "DOCX";
+  return null;
+}
+async function handleFile(file) {
+  const out = $("#upMsg"); if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { out.innerHTML = `<div class="note-bad">Rejected: the file is larger than 10 MB.</div>`; audit(`Upload rejected (size): ${file.name}`); return; }
+  const buf = new Uint8Array(await file.arrayBuffer()), kind = sniff(buf);
+  if (!kind) { out.innerHTML = `<div class="note-bad">Rejected: "${esc(file.name)}" is not a PDF, DOCX, PNG or JPEG file, whatever its name says. It has been quarantined.</div>`; audit(`Upload quarantined (type check failed): ${file.name}`); return; }
+  out.innerHTML = `<p class="small steps"><span class="wait">Hashing ${esc(file.name)}…</span></p>`;
+  const h = await sha256(buf), d = new Date(Date.now() + 5 * 3600e3);
+  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getUTCMonth()];
+  S.docs.push({ id: "d" + (S.docs.length + 1) + "_" + Date.now(), title: file.name, cls: $("#upCls").value, sealed: `${d.getUTCDate()} ${mon}, ${astana()}`, sealedHash: h, content: buf, result: null, origin: "upload" });
+  audit(`Sealed new document "${file.name}" (${kind}, SHA-256 ${short(h)})`);
+  toast(`Sealed: ${file.name} (${kind}). Hash ${short(h)}`);
+  render();
+}
+
+// ---- design notes ----
+function notesModal() {
+  const rows = [
+    ["Secure communication (interview priority 1)", "Protection badge always visible; compose screen explains how a message is protected; SECRET needs PIN again"],
+    ["Backup connectivity (priority 2)", "Four paths with live status; automatic failover during sending; messages held encrypted if every path is down"],
+    ["AI analysis with human control (priority 3)", "Advisory-only label; reasons and sources shown; escalation locked until you review a source; dismissal needs a reason"],
+    ["Tamper-evident documents", "SHA-256 seal on every document; mismatch blocks sending and attaching"],
+    ["Everything urgent on one screen", "Dashboard: alert, network status, priority messages, affected missions, national systems"],
+    ["Works with national systems", "Ministry network, National Certification Authority, consular registry and a common-schema gateway"]
+  ];
+  return `<div class="backdrop" data-a="closeModal"><aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="dnH" data-stop>
+    <div class="row" style="justify-content:space-between"><h2 id="dnH">Design notes</h2><button class="ghost" data-a="closeModal">Close</button></div>
+    <p class="small muted">Working prototype of the Secure Global Diplomatic Network. The scenario (a typhoon approaching Tokyo) and all data are simulated. Post-quantum encryption, certificate checks and satellite paths are shown as simulated steps; document seals use real SHA-256 hashing in your browser.</p>
+    <h3>User need → where it appears</h3>
+    <table class="t"><thead><tr><th>Need from user research</th><th>Prototype feature</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</tbody></table>
+    <h3>Try this</h3>
+    <ol class="small" style="padding-left:18px;margin-top:0"><li>Open the alert, expand a source and mark it reviewed, then escalate.</li><li>Send a message with the failover demo ticked and watch it reroute.</li><li>Verify all three documents. The third one was altered after sealing.</li><li>Press "Simulate link loss" until every path is down, send a message, then restore links.</li></ol>
+    <h3>Session audit log (${S.audit.length})</h3>
+    ${S.audit.length ? `<table class="t"><tbody>${S.audit.map(e => `<tr><td class="faint" style="white-space:nowrap">${astana(e.t)}</td><td>${esc(e.action)}</td></tr>`).join("")}</tbody></table>` : `<p class="small muted">No actions yet.</p>`}
+    <p class="small faint">Sessions lock after 10 minutes without activity.</p>
+  </aside></div>`;
+}
+function pinModal(resolve) {
+  $("#modal").innerHTML = `<div class="backdrop center"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="pinH">
+    <h2 id="pinH">Confirm it is you</h2><p class="small muted">SECRET messages need your PIN again before they are signed.</p>
+    <form id="pinForm"><label class="lbl" for="pin2">PIN</label><input class="f" id="pin2" type="password" inputmode="numeric" autocomplete="off">
+    <div id="pinErr" class="err" aria-live="polite"></div>
+    <div class="row" style="margin-top:12px"><button class="btn">Confirm</button><button type="button" class="btn line" id="pinCancel">Cancel</button></div></form></div></div>`;
+  $("#pin2").focus();
+  $("#pinCancel").onclick = () => { $("#modal").innerHTML = ""; resolve(false); };
+  $("#pinForm").onsubmit = e => { e.preventDefault(); if ($("#pin2").value === S.user.pin) { $("#modal").innerHTML = ""; resolve(true); } else { $("#pinErr").textContent = "That PIN does not match."; audit("Re-authentication failed"); } };
+}
+
+// ---------- flows ----------
+async function runSend({ to, cls, subject, body, attach, fail, title = "Message delivered securely", onDone }) {
+  const time = Date.now();
+  const receipt = await sha256(JSON.stringify({ to, cls, subject, body, attach, time, by: S.user.id }));
+  const msg = { id: "m" + time, mine: true, to, cls, subject, body, time, attach: attach ? S.docs.find(d => d.id === attach).title : null, receipt };
+  if (!active()) {
+    msg.held = true; S.messages.unshift(msg); S.queue.push(msg);
+    audit(`Message held (no path): "${subject || "(no subject)"}"`);
+    S.sending = { done: true, doneTitle: "Message held securely", steps: [
+      { k: "done", t: "Done: Encrypted end to end with ML-KEM-768." }, { k: "done", t: "Done: Signed with your identity key (ML-DSA-65)." },
+      { k: "notice", t: "Notice: no network path is available. The encrypted message is held on this device." }], receipt: "It will be sent automatically when any path returns." };
+    S.view = "sending"; render(); onDone?.(msg); return;
+  }
+  S.sending = { done: false, steps: [] }; S.view = "sending"; render();
+  const step = async (k, t, ms) => { S.sending.steps.push({ k, t }); if (S.view === "sending") render(); await sleep(ms); };
+  const replace = (k, t) => { S.sending.steps[S.sending.steps.length - 1] = { k, t }; if (S.view === "sending") render(); };
+  await step("wait", "Encrypting end to end with ML-KEM-768…", 700); replace("done", "Done: Encrypted end to end with ML-KEM-768.");
+  await step("wait", "Signing with your identity key (ML-DSA-65)…", 600); replace("done", "Done: Signed with your identity key (ML-DSA-65).");
+  let link = active();
+  await step("", `Routing through ${link.id}.`, 800);
+  if (fail && S.links.filter(l => l.up).length > 1) {
+    link.up = false; audit(`${link.id} lost its signal during sending`);
+    await step("notice", `Notice: ${link.id} lost its signal. Switching automatically.`, 1400);
+    const next = active(); audit(`Automatic failover ${link.id} → ${next.id}`);
+    await step("done", `Done: Rerouted to ${next.id} in 1.4 seconds. Same encryption and signature.`, 500);
+    link = next;
+  }
+  await step("wait", `Delivering to ${to.length} recipient(s)…`, 700);
+  replace("done", `Done: Delivered to ${to.length} mission(s). Signed receipts received.`);
+  msg.via = link.id; S.messages.unshift(msg);
+  audit(`Sent ${cls} message "${subject || "(no subject)"}" to ${to.map(k => MISSIONS[k].short).join(", ")} via ${link.id}`);
+  S.sending.done = true; S.sending.doneTitle = title;
+  S.sending.receipt = `Receipt: ${astana(time)} Astana time, hash ${short(receipt)}, via ${link.id}`;
+  if (S.view === "sending") render();
+  onDone?.(msg);
+}
+async function flushQueue() {
+  const a = active(); if (!a || !S.queue.length) return;
+  for (const m of S.queue) { m.held = false; m.via = a.id; audit(`Held message "${m.subject || "(no subject)"}" sent via ${a.id}`); }
+  toast(`${S.queue.length} held message(s) delivered via ${a.id}.`); S.queue = []; render();
+}
+
+async function doSendCompose() {
+  readCompose(); const C = S.compose;
+  if (!C.to.length) { C.err = "Choose at least one recipient."; render(); return; }
+  if (!C.body.trim()) { C.err = "Write a message before sending."; render(); $("#body")?.focus(); return; }
+  if (C.attach) { const d = S.docs.find(x => x.id === C.attach); if (await verifyDoc(d) !== "ok") { C.err = "The attached document failed its integrity check. Remove it before sending."; C.attach = null; render(); return; } }
+  if (C.cls === "SECRET") { const ok = await new Promise(pinModal); if (!ok) return; audit("Re-authenticated for SECRET message"); }
+  C.err = ""; S.compose = null;
+  runSend({ to: C.to, cls: C.cls, subject: C.subject, body: C.body, attach: C.attach, fail: C.fail });
+  S.failoverDemo = false;
+}
+
+// ---------- events ----------
+const handlers = {
+  tab(v) { S.tab = v; S.view = null; render(); },
+  back() { S.view = null; S.compose = null; S.tab = "dashboard"; render(); window.scrollTo(0, 0); },
+  notes() { $("#modal").innerHTML = notesModal(); $("#modal .sheet").focus?.(); },
+  closeModal() { $("#modal").innerHTML = ""; },
+  signout() { audit("Signed out"); S.screen = "signin"; S.user.pin = null; render(); toast("Signed out. Session keys destroyed."); },
+  openAlert() { S.view = "alert"; S.tab = "alerts"; render(); window.scrollTo(0, 0); },
+  review(id) { S.alert.reviewed.add(id); S.alert.opened.add(id); audit(`Reviewed source: ${S.alert.sources.find(s => s.id === id).name}`); render(); },
+  async signoff() { const A = S.alert; A.translation = "pending"; audit("Requested interpreter sign-off for translation"); render();
+    await sleep(3500); A.translation = "approved"; A.transAt = Date.now(); audit("Translation signed off by duty interpreter"); toast("The duty interpreter signed off the translation."); if (S.view === "alert") render(); },
+  escalate() { S.alert.panel = "escalate"; render(); },
+  dismiss() { S.alert.panel = "dismiss"; render(); $("#disReason")?.focus(); },
+  cancelPanel() { S.alert.panel = null; render(); },
+  reopen() { Object.assign(S.alert, { decision: null, panel: null, reason: "" }); audit("Reopened alert"); render(); },
+  async deeper() { const A = S.alert; A.deeper = "pending"; audit("Requested deeper analysis from the analyst team"); render(); toast("Request sent to the analyst team. The AI does not change the alert by itself.");
+    await sleep(6000); A.sources.push({ id: "s5", name: "Airline operations notices", type: "Data feed", rel: "High", added: true, detail: "Official notices from four airlines confirming cancellations at both Tokyo airports from 06:00 local time tomorrow. Added by the analyst team after your request." });
+    A.deeper = "done"; audit("Analyst team added a source: Airline operations notices"); toast("The analyst team added a new source to the typhoon alert."); render(); },
+  confirmDismiss() { const r = $("#disReason").value.trim(); if (r.length < 10) { $("#disErr").textContent = "Give a short reason (at least 10 characters)."; return; }
+    Object.assign(S.alert, { decision: "dismissed", decisionAt: Date.now(), reason: r, panel: null }); audit(`Dismissed typhoon alert. Reason: ${r}`); render(); },
+  confirmEsc() {
+    const to = [...document.querySelectorAll('input[name=escTo]:checked')].map(i => i.value), note = $("#escNote").value.trim();
+    if (!to.length) { $("#escErr").textContent = "Choose at least one mission."; return; }
+    if (!note) { $("#escErr").textContent = "Write an instruction for the missions."; return; }
+    new Promise(pinModal).then(ok => { if (!ok) return;
+      audit("Re-authenticated for escalation");
+      runSend({ to, cls: "SECRET", subject: "Typhoon warning: activate consular emergency plan", body: note, fail: false, title: "Escalation delivered securely",
+        onDone: msg => { Object.assign(S.alert, { decision: "escalated", decisionAt: Date.now(), notified: to, panel: null }); audit(`Escalated typhoon alert to ${to.map(k => MISSIONS[k].short).join(", ")}`);
+          to.forEach(k => { MISSIONS[k].status = `Notified ${astana()}. Waiting for acknowledgment.`; });
+          setTimeout(() => { to.forEach(k => { MISSIONS[k].status = `Acknowledged ${astana()}. Consular emergency plan active.`; }); audit("Missions acknowledged the escalation"); toast("All notified missions acknowledged the escalation."); render(); }, 5000); } });
+    });
+  },
+  compose() { S.compose = newCompose(); S.view = "compose"; render(); },
+  composeDoc() { S.compose = newCompose({ pick: true }); S.view = "compose"; render(); },
+  sendDoc(id) { const d = S.docs.find(x => x.id === id); S.compose = newCompose({ attach: id, subject: d.title.replace(/\.\w+$/, ""), cls: d.cls }); S.view = "compose"; render(); },
+  reply(id) { const m = S.messages.find(x => x.id === id); S.compose = newCompose({ to: [m.from], cls: m.cls, subject: "Re: " + m.subject, replyTo: id }); S.view = "compose"; render(); $("#body")?.focus(); },
+  openMsg(id) { S.tab = "messages"; S.view = null; S.openMsg = id; const m = S.messages.find(x => x.id === id); if (m) m.unread = false; render(); },
+  pick() { readCompose(); S.compose.pick = true; render(); },
+  pickClose() { readCompose(); S.compose.pick = false; render(); },
+  unattach() { readCompose(); S.compose.attach = null; render(); },
+  async doAttach() { readCompose(); const v = document.querySelector('input[name=att]:checked')?.value; if (!v) return;
+    const d = S.docs.find(x => x.id === v), r = await verifyDoc(d);
+    if (r !== "ok") { S.compose.err = `"${d.title}" failed its integrity check and cannot be attached.`; S.compose.attach = null; }
+    else { S.compose.attach = v; S.compose.pick = false; S.compose.err = ""; if (!S.compose.subject) S.compose.subject = d.title.replace(/\.\w+$/, ""); }
+    render(); },
+  send() { doSendCompose(); },
+  async verify(id) { const d = S.docs.find(x => x.id === id); await verifyDoc(d); render(); },
+  dropLink() { const a = active(); if (!a) return; a.up = false; audit(`Demo: ${a.id} taken down`); const n = active();
+    toast(n ? `${a.id} lost its signal. SGDN switched to ${n.id} automatically.` : `${a.id} lost its signal. No path left: messages will be held.`, n ? "warn" : "bad"); render(); },
+  restore() { S.links.forEach(l => l.up = true); audit("Demo: all links restored"); toast("All paths restored. LEO-1 is active again."); render(); flushQueue(); }
+};
+
+document.addEventListener("click", e => {
+  const stop = e.target.closest("[data-stop]"), el = e.target.closest("[data-a]");
+  if (!el || (stop && !stop.contains(el) ) ) return;
+  if (stop && el.classList.contains("backdrop")) return;
+  const a = el.dataset.a; if (!handlers[a]) return;
+  if (el.tagName === "BUTTON" && el.form && a !== "send") e.preventDefault();
+  if (a === "send") e.preventDefault();
+  handlers[a](el.dataset.v);
+});
+document.addEventListener("submit", e => { if (e.target.id === "signin") doSignin(e); if (e.target.id === "compose") { e.preventDefault(); doSendCompose(); } });
+document.addEventListener("toggle", e => {
+  const d = e.target;
+  if (d.matches?.("details.msg")) { const m = S.messages.find(x => x.id === d.dataset.msg); if (d.open) { S.openMsg = m.id; if (m.unread) { m.unread = false; audit(`Opened message from ${MISSIONS[m.from]?.short || "you"}`); const t = document.querySelector('.tab[data-v=messages]'); if (t) { const c = t.querySelector(".count"); const u = unread(); if (c) { if (u) c.textContent = u; else c.remove(); } } d.querySelector(".new")?.remove(); } } }
+  if (d.matches?.("details.src")) { d.open ? S.alert.opened.add(d.dataset.src) : S.alert.opened.delete(d.dataset.src); }
+}, true);
+document.addEventListener("change", e => {
+  if (e.target.id === "file") handleFile(e.target.files[0]);
+  if (e.target.id === "cls" && S.compose) { S.compose.cls = e.target.value; const n = $("#secretNote"); if (n) n.textContent = e.target.value === "SECRET" ? "SECRET messages ask for your PIN again before sending." : ""; }
+});
+document.addEventListener("dragover", e => { const d = e.target.closest?.("#drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
+document.addEventListener("dragleave", e => { e.target.closest?.("#drop")?.classList.remove("over"); });
+document.addEventListener("drop", e => { const d = e.target.closest?.("#drop"); if (d) { e.preventDefault(); d.classList.remove("over"); handleFile(e.dataTransfer.files[0]); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#modal").innerHTML && !$("#pin2")) $("#modal").innerHTML = ""; });
+["click", "keydown", "pointermove"].forEach(ev => document.addEventListener(ev, () => S.lastActive = Date.now(), { passive: true }));
+
+// live clock, latency jitter, idle lock
+setInterval(() => {
+  if (S.screen !== "app") return;
+  if (Date.now() - S.lastActive > 10 * 60e3) { audit("Session locked after 10 minutes without activity"); S.screen = "signin"; S.user.pin = null; S.signinMsg = "Your session locked after 10 minutes without activity. Sign in again."; $("#modal").innerHTML = ""; render(); return; }
+  S.links.forEach(l => { if (l.up) l.lat = Math.round(l.base * (0.92 + Math.random() * 0.16)); });
+  const c = $("#clock"); if (c) c.textContent = astana();
+  if (S.tab === "dashboard" && !S.view && !document.activeElement?.closest?.("form")) {
+    S.links.forEach(l => { const row = [...document.querySelectorAll(".netrow")].find(r => r.querySelector("b")?.textContent === l.id); const m = row?.querySelector(".muted"); if (m && l.up) m.textContent = `${l.orbit}, ${l.lat} ms`; });
+  }
+}, 4000);
+
+initDocs().then(render);
+</script>
+</body>
+</html>
